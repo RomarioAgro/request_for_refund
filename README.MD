@@ -1,16 +1,16 @@
 # Формирование заявления на возврат
 
 Windows CLI-приложение, которое заполняет HTML-шаблон данными возврата из JSON,
-формирует заявление в PDF через Chromium и открывает готовый документ системной
+формирует заявление в PDF через xhtml2pdf и открывает готовый документ системной
 программой просмотра.
 
 ## Требования
 
 - Windows 10 или Windows 11
 - Python 3.10+
-- Chromium, установленный через Playwright
+- каталог `fonts` с файлами `DejaVuSerif.ttf` и `DejaVuSerif-Bold.ttf`
 
-Microsoft Word не требуется и не используется.
+Браузер, Microsoft Word и внешние PDF-конвертеры не требуются.
 
 ## Установка
 
@@ -18,7 +18,6 @@ Microsoft Word не требуется и не используется.
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-python -m playwright install chromium
 ```
 
 ## Настройка
@@ -27,7 +26,7 @@ python -m playwright install chromium
 
 ```ini
 [paths]
-template = templates/refund_application_template.html
+template = templates/refund_application_template_xhtml2pdf.html
 logs_dir = logs
 pdf_output_dir = output
 ```
@@ -70,7 +69,7 @@ python refund_application_generator.py "путь\к\файлу.json"
 После успешного запуска программа:
 
 1. проверит конфигурацию и JSON;
-2. безопасно заполнит `templates/refund_application_template.html`;
+2. безопасно заполнит `templates/refund_application_template_xhtml2pdf.html`;
 3. рассчитает сумму всех `items[].price`;
 4. сохранит PDF в `pdf_output_dir`;
 5. запишет технический журнал в `logs_dir`;
@@ -87,18 +86,18 @@ python refund_application_generator.py "путь\к\файлу.json"
 ## Проверка
 
 ```powershell
-python -m unittest -v
-python -m py_compile refund_application_generator.py test_refund_application_generator.py
+python -m unittest discover -s tests -v
+python -m py_compile refund_application_generator.py tests/test_refund_application_generator.py
 ```
 
 ## Типовые ошибки
 
-- `Библиотека Playwright не установлена` — выполните
+- `Библиотека xhtml2pdf не установлена` — выполните
   `python -m pip install -r requirements.txt`.
-- `Не удалось сформировать PDF через Chromium` — выполните
-  `python -m playwright install chromium`.
+- `Файл шрифта не найден` — проверьте наличие обоих TTF-файлов в `fonts`.
+- `Не удалось сформировать PDF через xhtml2pdf` — проверьте шаблон и локальные шрифты.
 - `HTML-шаблон не найден` — проверьте параметр `template` в `config.ini`.
 - Ошибка поля JSON — проверьте обязательные поля и формат даты `YYYYMMDD`.
 
-Полное техническое задание находится в
-`ТЗ_формирование_заявления_на_возврат.md`.
+Актуальное техническое задание находится в
+`ТЗ_переработка_генератора_PDF_под_xhtml2pdf.md`.

@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Заявление на возврат</title>
+  <style type="text/css">
+    @page {
+      size: A4 portrait;
+      margin: 8mm 14mm 8mm 14mm;
+    }
+
+    @font-face {
+      font-family: DejaVuSerif;
+      src: url("../fonts/DejaVuSerif.ttf");
+    }
+
+    @font-face {
+      font-family: DejaVuSerif;
+      src: url("../fonts/DejaVuSerif-Bold.ttf");
+      font-weight: bold;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      color: #000000;
+      font-family: DejaVuSerif, serif;
+      font-size: 9.5pt;
+      line-height: 11pt;
+    }
+
+    p { margin: 0 0 1.2mm 0; padding: 0; }
+
+    .recipient-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2mm;
+    }
+
+    .recipient-spacer { width: 49%; }
+    .recipient { width: 51%; vertical-align: top; }
+    .recipient-name { text-align: right; padding-right: 5mm; margin-bottom: 1mm; }
+
+    .line {
+      display: inline-block;
+      text-decoration: underline;
+      height: 10pt;
+      vertical-align: bottom;
+    }
+
+    .full-line {
+      border-bottom: 0.3mm solid #000000;
+      height: 4.2mm;
+      margin: 0;
+    }
+
+    .hint {
+      text-align: center;
+      font-size: 7pt;
+      font-weight: bold;
+      line-height: 8pt;
+      margin: 0;
+    }
+
+    h1 {
+      margin: 0 0 3mm 84mm;
+      padding: 0;
+      font-size: 10.5pt;
+      font-weight: normal;
+    }
+
+    .items { margin: 0 0 1mm 0; }
+    .item { margin: 0; padding: 0; }
+    .price { margin-bottom: 3mm; }
+    .underline { text-decoration: underline; }
+
+    .choice-block {
+      margin-top: 1mm;
+      -pdf-keep-with-next: true;
+    }
+
+    .choice-block p { margin-bottom: 0.5mm; }
+    .reason-line { border-bottom: 0.3mm solid #000000; height: 3.8mm; }
+
+    .signature-table,
+    .inline-signature-table {
+      width: 100%;
+      border-collapse: collapse;
+      -pdf-keep-in-frame-mode: shrink;
+    }
+
+    .signature-table { margin-top: 3mm; }
+    .signature-table td { vertical-align: bottom; }
+    .signature-date { width: 27%; padding-bottom: 3mm; }
+    .signature-gap { width: 4%; }
+    .signature-cell { text-align: center; }
+    .signature-cell-1 { width: 28%; }
+    .signature-cell-2 { width: 37%; }
+    .signature-line { border-bottom: 0.3mm solid #000000; height: 4mm; }
+
+    .legal {
+      margin-top: 2.5mm;
+      text-align: justify;
+      -pdf-keep-with-next: true;
+    }
+
+    .legal p { text-indent: 10mm; margin: 0; }
+
+    .inline-signature-table {
+      width: 84%;
+      margin-left: 10mm;
+      margin-top: 1mm;
+    }
+
+    .inline-signature-table td { text-align: center; vertical-align: top; }
+    .inline-signature-table .left { width: 40%; }
+    .inline-signature-table .gap { width: 6%; }
+    .inline-signature-table .right { width: 54%; }
+    .org { font-family: DejaVuSerif, serif; }
+  </style>
+</head>
+<body>
+  <table class="recipient-table">
+    <tr>
+      <td class="recipient-spacer"></td>
+      <td class="recipient">
+        <div class="recipient-name">{recipient}</div>
+        <p>от <span class="line" style="width: 79mm;">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</span></p>
+        <div class="hint">(ФИО)</div>
+        <div class="full-line">&#160;</div>
+        <p>зарегистрирован<span class="line" style="width: 32mm;">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</span> по адресу:</p>
+        <div class="full-line">&#160;</div>
+        <div class="full-line">&#160;</div>
+        <p>паспорт серия <span class="line" style="width: 17mm;">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</span> номер <span class="line" style="width: 24mm;">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</span></p>
+        <p>выдан: <span class="line" style="width: 8mm;">&#160;&#160;&#160;&#160;</span> <span class="line" style="width: 34mm;">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</span> 20<span class="line" style="width: 8mm;">&#160;&#160;&#160;&#160;</span> года</p>
+        <p>кем: <span class="line" style="width: 74mm;">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</span></p>
+        <div class="full-line">&#160;</div>
+        <p>контактный телефон: +7-<span class="line" style="width: 45mm;">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</span></p>
+      </td>
+    </tr>
+  </table>
+
+  <h1>заявление</h1>
+
+  <p>Я, <span class="line" style="width: 116mm;">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</span>, {date} года</p>
+  <div class="hint" style="width: 119mm; margin-left: 13mm;">(ФИО печатными буквами)</div>
+  <p>приобрел__ в магазине «{org}», расположенном по адресу: {address}, следующий товар:</p>
+  <div class="items">{items}</div>
+  <p class="price">по цене: {total_amount} рублей.</p>
+
+  <p><strong class="underline">подчеркнуть нужное</strong></p>
+
+  <div class="choice-block">
+    <p>В соответствии с п. 1 ст. 18 «Закона о защите прав потребителей», прошу:</p>
+    <p>заменить указанный товар;</p>
+    <p>соразмерно уменьшить покупную цену;</p>
+    <p>устранить недостаток;</p>
+    <p>вернуть уплаченную за товар сумму</p>
+    <p>в связи с наличием следующих недостатков: <span class="line" style="width: 76mm;">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</span></p>
+    <div class="reason-line">&#160;</div>
+    <div class="reason-line">&#160;</div>
+  </div>
+
+  <div class="choice-block">
+    <p>В соответствии с п. 1 ст. 25 «Закона о защите прав потребителей», прошу:</p>
+    <p>заменить указанный товар;</p>
+    <p>вернуть уплаченную за товар сумму</p>
+    <p>в связи с тем, что товар (не подошел по форме, габаритам, фасону, расцветке, размеру или комплектации — указать) <span class="line" style="width: 18mm;">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</span></p>
+    <div class="reason-line">&#160;</div>
+    <div class="reason-line">&#160;</div>
+  </div>
+
+  <table class="signature-table">
+    <tr>
+      <td class="signature-date">{application_date}</td>
+      <td class="signature-gap"></td>
+      <td class="signature-cell signature-cell-1">
+        <div class="signature-line">&#160;</div>
+        <div class="hint">(подпись покупателя)</div>
+      </td>
+      <td class="signature-gap"></td>
+      <td class="signature-cell signature-cell-2">
+        <div class="signature-line">&#160;</div>
+        <div class="hint">(ФИО)</div>
+      </td>
+    </tr>
+  </table>
+
+  <div class="legal">
+    <p>Настоящим ознакомлен, что согласно п. 1 Указания Центрального Банка Российской Федерации от 09.12.2019 № 5348-У «О правилах наличных расчетов» возврат денежных средств за оплаченный банковской картой товар осуществляется путем перечисления денежных средств на банковскую карту покупателя на основании возвратного чека и в сроки, установленные банком-эквайером.</p>
+    <table class="inline-signature-table">
+      <tr>
+        <td class="left"><div class="signature-line">&#160;</div><div class="hint">(подпись покупателя)</div></td>
+        <td class="gap"></td>
+        <td class="right"><div class="signature-line">&#160;</div><div class="hint">(ФИО покупателя)</div></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="legal">
+    <p>Настоящим ознакомлен с тем, что персональные данные покупателя получены <span class="org">{org}</span> в связи с заключением договора розничной купли-продажи на приобретение товара, указанного в кассовом чеке № <span class="line" style="width: 22mm;">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</span> от <span class="line" style="width: 28mm;">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</span> 20<span class="line" style="width: 7mm;">&#160;&#160;&#160;&#160;</span> г.</p>
+    <p><span class="org">{org}</span> гарантирует полученные персональные данные покупателя не распространять и не предоставлять третьим лицам без согласия покупателя и использовать исключительно для исполнения указанного договора розничной купли-продажи товара.</p>
+    <table class="inline-signature-table">
+      <tr>
+        <td class="left"><div class="signature-line">&#160;</div><div class="hint">(подпись покупателя)</div></td>
+        <td class="gap"></td>
+        <td class="right"><div class="signature-line">&#160;</div><div class="hint">(ФИО покупателя)</div></td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

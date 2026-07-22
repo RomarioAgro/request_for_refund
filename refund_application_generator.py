@@ -11,10 +11,13 @@ import math
 import os
 import re
 import sys
+import threading
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +26,9 @@ PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 RECIPIENT_NAME_RE = re.compile(
     r"[А-ЯЁA-Z][А-ЯЁа-яёA-Za-z-]*(?:\s+(?:[А-ЯЁA-Z]\.|[А-ЯЁA-Z][А-ЯЁа-яёA-Za-z-]*)){1,2}"
 )
+FONT_FILES = ("DejaVuSerif.ttf", "DejaVuSerif-Bold.ttf")
+TemplateValue = str | list[str]
+_XHTML2PDF_LOCK = threading.Lock()
 
 
 class ApplicationError(Exception):
@@ -78,9 +84,6 @@ def load_config(config_path: Path) -> Paths:
         path = Path(value)
         values[key] = path if path.is_absolute() else base_dir / path
 
-    if not values["template"].is_file():
-        raise ApplicationError(f"HTML-шаблон не найден: {values['template']}")
-
     for key in ("logs_dir", "pdf_output_dir"):
         try:
             values[key].mkdir(parents=True, exist_ok=True)
@@ -130,7 +133,7 @@ def load_json_file(json_path: Path) -> dict[str, Any]:
     return data
 
 
-def validate_data(data: dict[str, Any]) -> tuple[dict[str, str], int]:
+def validate_data(data: dict[str, Any]) -> tuple[dict[str, TemplateValue], int]:
     """Проверяет данные возврата и готовит значения шаблона.
 
     Args:
@@ -171,7 +174,7 @@ def validate_data(data: dict[str, Any]) -> tuple[dict[str, str], int]:
             raise ApplicationError(f"Поле items[{index - 1}].price должно быть целым числом")
         if not math.isfinite(price) or not float(price).is_integer() or price < 0:
             raise ApplicationError(f"Поле items[{index - 1}].price должно быть неотрицательным целым числом")
-        names.append(f"{index}. {name.strip()}" if len(items) > 1 else name.strip())
+        names.append(name.strip())
         total += int(price)
 
     if total <= 0:
@@ -190,18 +193,18 @@ def validate_data(data: dict[str, Any]) -> tuple[dict[str, str], int]:
         "org": strings["org"],
         "address": strings["address"],
         "date": purchase_date,
-        "items": "\n".join(names),
+        "items": names,
         "total_amount": f"{total:,}".replace(",", " "),
         "application_date": datetime.now().strftime("%d.%m.%Y"),
     }, total
 
 
-def render_template(template: str, values: dict[str, str]) -> str:
+def render_template(template: str, values: dict[str, TemplateValue]) -> str:
     """Безопасно подставляет значения в известные метки HTML-шаблона.
 
     Args:
         template: Исходный HTML.
-        values: Значения меток без фигурных скобок.
+        values: Значения меток без фигурных скобок; items содержит список имён.
 
     Returns:
         Заполненный HTML.
@@ -222,7 +225,19 @@ def render_template(template: str, values: dict[str, str]) -> str:
             details.append(f"неизвестны: {', '.join(unknown)}")
         raise ApplicationError(f"Некорректные метки HTML-шаблона ({'; '.join(details)})")
 
-    escaped = {key: html.escape(value, quote=True) for key, value in values.items()}
+    items = values.get("items")
+    if not isinstance(items, list) or not all(isinstance(item, str) for item in items):
+        raise ApplicationError("Значение items для шаблона должно быть списком строк")
+
+    escaped = {
+        key: html.escape(value, quote=True)
+        for key, value in values.items()
+        if key != "items" and isinstance(value, str)
+    }
+    escaped["items"] = "".join(
+        f'<div class="item">{f"{index}. " if len(items) > 1 else ""}{html.escape(item, quote=True)}</div>'
+        for index, item in enumerate(items, start=1)
+    )
     return PLACEHOLDER_RE.sub(lambda match: escaped[match.group(1)], template)
 
 
@@ -247,44 +262,127 @@ def build_pdf_path(output_dir: Path, json_path: Path, now: datetime | None = Non
     return candidate
 
 
-def create_pdf(document_html: str, pdf_path: Path) -> None:
-    """Формирует PDF из HTML через Chromium/Playwright.
+def validate_template_resources(template_path: Path) -> None:
+    """Проверяет наличие HTML-шаблона и обязательных TTF-шрифтов.
+
+    Args:
+        template_path: Путь к HTML-шаблону.
+
+    Raises:
+        ApplicationError: Шаблон или один из шрифтов отсутствует.
+    """
+    if not template_path.is_file():
+        raise ApplicationError(f"HTML-шаблон не найден: {template_path}")
+    fonts_dir = template_path.resolve().parent.parent / "fonts"
+    for font_name in FONT_FILES:
+        font_path = fonts_dir / font_name
+        if not font_path.is_file():
+            raise ApplicationError(f"Файл шрифта не найден: {font_path}")
+
+
+def create_link_callback(template_path: Path):
+    """Создаёт безопасный resolver локальных ресурсов xhtml2pdf.
+
+    Args:
+        template_path: Путь исходного HTML-шаблона.
+
+    Returns:
+        Callback, преобразующий URI ресурса в абсолютный локальный путь.
+
+    Raises:
+        ApplicationError: Callback отклоняет сеть, выход за корень и отсутствующие файлы.
+    """
+    project_root = template_path.resolve().parent.parent
+    template_dir = template_path.resolve().parent
+
+    def resolve_resource(uri: str, _rel: str | None = None) -> str:
+        parsed = urlparse(str(uri))
+        if parsed.scheme and parsed.scheme != "file":
+            raise ApplicationError(f"Сетевой или неподдерживаемый ресурс запрещён: {uri}")
+        if parsed.scheme == "file":
+            path_text = unquote(parsed.path)
+            if re.match(r"^/[A-Za-z]:/", path_text):
+                path_text = path_text[1:]
+            resource_path = Path(path_text)
+        else:
+            resource_path = template_dir / unquote(parsed.path)
+        resource_path = resource_path.resolve()
+        if not resource_path.is_relative_to(project_root):
+            raise ApplicationError(f"Путь к ресурсу выходит за каталог проекта: {uri}")
+        if not resource_path.is_file():
+            raise ApplicationError(f"Локальный ресурс не найден: {resource_path}")
+        return str(resource_path)
+
+    return resolve_resource
+
+
+def create_pdf(document_html: str, pdf_path: Path, template_path: Path) -> None:
+    """Формирует PDF из HTML через xhtml2pdf.
 
     Args:
         document_html: Заполненный HTML-документ.
         pdf_path: Путь создаваемого PDF.
+        template_path: Путь исходного шаблона для разрешения ресурсов.
 
     Raises:
-        ApplicationError: Playwright или Chromium недоступны либо PDF не создан.
+        ApplicationError: xhtml2pdf недоступен, сообщил об ошибке или PDF повреждён.
     """
     try:
-        from playwright.sync_api import Error, sync_playwright
+        from xhtml2pdf import files as pisa_files
+        from xhtml2pdf import pisa
     except ImportError as exc:
-        raise ApplicationError("Библиотека Playwright не установлена. Выполните: pip install -r requirements.txt") from exc
+        raise ApplicationError("Библиотека xhtml2pdf не установлена. Выполните: pip install -r requirements.txt") from exc
 
-    try:
-        with sync_playwright() as playwright:
-            browser = playwright.chromium.launch()
-            try:
-                page = browser.new_page()
-                page.set_content(document_html, wait_until="load")
-                page.pdf(
-                    path=str(pdf_path),
-                    format="A4",
-                    scale=1,
-                    print_background=True,
-                    display_header_footer=False,
-                    prefer_css_page_size=True,
+    temp_paths: list[Path] = []
+    original_named_temp = pisa_files.tempfile.NamedTemporaryFile
+
+    def windows_named_temp(*args, **kwargs):
+        kwargs["delete"] = False
+        temp_file = original_named_temp(*args, **kwargs)
+        temp_paths.append(Path(temp_file.name))
+        return temp_file
+
+    with _XHTML2PDF_LOCK:
+        try:
+            # ponytail: xhtml2pdf 0.2.17 не переоткрывает delete=True TTF на Windows;
+            # lock и workaround удалить после исправления upstream.
+            if os.name == "nt":
+                pisa_files.tempfile.NamedTemporaryFile = windows_named_temp
+            with pdf_path.open("wb") as pdf_file:
+                status = pisa.CreatePDF(
+                    src=document_html,
+                    dest=pdf_file,
+                    encoding="utf-8",
+                    path=template_path.resolve().as_uri(),
+                    link_callback=create_link_callback(template_path),
                 )
-            finally:
-                browser.close()
-    except Error as exc:
-        raise ApplicationError(
-            f"Не удалось сформировать PDF через Chromium: {exc}. Выполните: playwright install chromium"
-        ) from exc
-
-    if not pdf_path.is_file():
-        raise ApplicationError(f"PDF не был создан: {pdf_path}")
+            if status.err:
+                raise ApplicationError("xhtml2pdf сообщил об ошибке преобразования HTML в PDF")
+            if not pdf_path.is_file() or pdf_path.stat().st_size == 0:
+                raise ApplicationError(f"Создан пустой PDF: {pdf_path}")
+            if pdf_path.read_bytes()[:5] != b"%PDF-":
+                raise ApplicationError(f"Созданный файл не имеет сигнатуру PDF: {pdf_path}")
+        except Exception as exc:
+            cleanup_error = None
+            try:
+                pdf_path.unlink(missing_ok=True)
+            except OSError as cleanup_exc:
+                cleanup_error = cleanup_exc
+            message = str(exc) if isinstance(exc, ApplicationError) else f"Не удалось сформировать PDF через xhtml2pdf: {exc}"
+            if cleanup_error:
+                message += f"; неполный PDF не удалось удалить: {cleanup_error}"
+            raise ApplicationError(message) from exc
+        finally:
+            pisa_files.tempfile.NamedTemporaryFile = original_named_temp
+            try:
+                pisa_files.cleanFiles()
+            except Exception as cleanup_exc:
+                logger.warning("Не удалось закрыть временные файлы xhtml2pdf: %s", cleanup_exc)
+            for temp_path in temp_paths:
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except OSError as cleanup_exc:
+                    logger.warning("Не удалось удалить временный файл xhtml2pdf %s: %s", temp_path, cleanup_exc)
 
 
 def configure_logging(logs_dir: Path) -> Path:
@@ -328,6 +426,7 @@ def generate(json_path: Path, config_path: Path) -> Path:
     logger.info("Запуск. Входной JSON: %s", json_path.resolve())
     logger.info("HTML-шаблон: %s", paths.template.resolve())
 
+    validate_template_resources(paths.template)
     data = load_json_file(json_path)
     values, total = validate_data(data)
     try:
@@ -339,13 +438,16 @@ def generate(json_path: Path, config_path: Path) -> Path:
     pdf_path = build_pdf_path(paths.pdf_output_dir, json_path)
     logger.info("Количество товаров: %d", len(data["items"]))
     logger.info("Общая сумма: %d", total)
-    create_pdf(document_html, pdf_path)
+    started_at = time.monotonic()
+    create_pdf(document_html, pdf_path, paths.template)
+    logger.info("PDF сформирован за %.3f с", time.monotonic() - started_at)
     logger.info("PDF создан: %s", pdf_path.resolve())
 
     try:
         os.startfile(pdf_path.resolve())
     except OSError as exc:
-        raise ApplicationError(f"PDF создан, но не удалось открыть файл {pdf_path}: {exc}") from exc
+        logger.warning("PDF создан, но не удалось открыть файл %s: %s", pdf_path, exc)
+        sys.stderr.write(f"PDF создан: {pdf_path.resolve()}\nАвтоматическое открытие не удалось: {exc}\n")
     return pdf_path.resolve()
 
 

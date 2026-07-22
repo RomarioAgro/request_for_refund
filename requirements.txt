@@ -1,1 +1,1 @@
-playwright
+xhtml2pdf==0.2.17

@@ -52,6 +52,40 @@ class RefundApplicationGeneratorTest(unittest.TestCase):
         with self.assertRaisesRegex(ApplicationError, "неотрицательным целым"):
             validate_data(data)
 
+    def test_recipient_wraps_only_after_closing_quote(self) -> None:
+        """Добавляет перенос перед ФИО и сохраняет само ФИО неразрывным."""
+        data = {
+            "date": "20260720",
+            "org": "Организация",
+            "recipient": 'Генеральному директору ООО "Клевер Урал" Валейня И. Л.',
+            "address": "Адрес",
+            "items": [{"name": "Товар", "price": 1}],
+        }
+
+        values, _ = validate_data(data)
+
+        self.assertEqual(
+            values["recipient"],
+            'Генеральному директору ООО "Клевер Урал"\u200b Валейня\u00a0И.\u00a0Л.',
+        )
+
+    def test_recipient_does_not_join_non_name_suffix(self) -> None:
+        """Оставляет обычные пробелы в пояснении после закрывающей кавычки."""
+        data = {
+            "date": "20260720",
+            "org": "Организация",
+            "recipient": "ООО «Клевер Урал» в лице генерального директора",
+            "address": "Адрес",
+            "items": [{"name": "Товар", "price": 1}],
+        }
+
+        values, _ = validate_data(data)
+
+        self.assertEqual(
+            values["recipient"],
+            "ООО «Клевер Урал»\u200b в лице генерального директора",
+        )
+
     def test_config_allows_percent_in_paths(self) -> None:
         """Не интерпретирует знак процента в путях config.ini."""
         with tempfile.TemporaryDirectory() as directory:

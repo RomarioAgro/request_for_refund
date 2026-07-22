@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 REQUIRED_FIELDS = {"recipient", "org", "address", "date", "items", "total_amount", "application_date"}
 PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
+RECIPIENT_NAME_RE = re.compile(
+    r"[А-ЯЁA-Z][А-ЯЁа-яёA-Za-z-]*(?:\s+(?:[А-ЯЁA-Z]\.|[А-ЯЁA-Z][А-ЯЁа-яёA-Za-z-]*)){1,2}"
+)
 
 
 class ApplicationError(Exception):
@@ -174,8 +177,16 @@ def validate_data(data: dict[str, Any]) -> tuple[dict[str, str], int]:
     if total <= 0:
         raise ApplicationError("Общая сумма возврата должна быть больше нуля")
 
+    recipient = strings["recipient"]
+    quote_index = max(recipient.rfind(quote) for quote in ('"', "»", "”"))
+    suffix = recipient[quote_index + 1 :].lstrip() if quote_index >= 0 else ""
+    if suffix:
+        if RECIPIENT_NAME_RE.fullmatch(suffix):
+            suffix = suffix.replace(" ", chr(160))
+        recipient = f"{recipient[:quote_index + 1]}\u200b {suffix}"
+
     return {
-        "recipient": strings["recipient"],
+        "recipient": recipient,
         "org": strings["org"],
         "address": strings["address"],
         "date": purchase_date,

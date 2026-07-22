@@ -26,7 +26,9 @@ PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 RECIPIENT_NAME_RE = re.compile(
     r"[А-ЯЁA-Z][А-ЯЁа-яёA-Za-z-]*(?:\s+(?:[А-ЯЁA-Z]\.|[А-ЯЁA-Z][А-ЯЁа-яёA-Za-z-]*)){1,2}"
 )
-FONT_FILES = ("DejaVuSerif.ttf", "DejaVuSerif-Bold.ttf")
+ARIAL_REGULAR_PATH = Path(r"C:\Windows\Fonts\arial.ttf")
+ARIAL_BOLD_PATH = Path(r"C:\Windows\Fonts\arialbd.ttf")
+ARIAL_FONT_PATHS = (ARIAL_REGULAR_PATH, ARIAL_BOLD_PATH)
 TemplateValue = str | list[str]
 _XHTML2PDF_LOCK = threading.Lock()
 
@@ -41,13 +43,11 @@ class Paths:
 
     Attributes:
         template: HTML-шаблон заявления.
-        fonts_dir: Каталог TTF-шрифтов.
         logs_dir: Каталог журналов.
         pdf_output_dir: Каталог готовых PDF.
     """
 
     template: Path
-    fonts_dir: Path
     logs_dir: Path
     pdf_output_dir: Path
 
@@ -79,7 +79,7 @@ def load_config(config_path: Path) -> Paths:
 
     base_dir = config_path.resolve().parent
     values: dict[str, Path] = {}
-    for key in ("template", "fonts_dir", "logs_dir", "pdf_output_dir"):
+    for key in ("template", "logs_dir", "pdf_output_dir"):
         value = parser.get("paths", key, fallback="").strip()
         if not value:
             raise ApplicationError(f"В секции [paths] отсутствует параметр {key}")
@@ -264,32 +264,32 @@ def build_pdf_path(output_dir: Path, json_path: Path, now: datetime | None = Non
     return candidate
 
 
-def validate_template_resources(template_path: Path, fonts_dir: Path) -> None:
-    """Проверяет наличие HTML-шаблона и обязательных TTF-шрифтов.
+def validate_template_resources(template_path: Path) -> None:
+    """Проверяет HTML-шаблон и системные шрифты Arial.
 
     Args:
         template_path: Путь к HTML-шаблону.
-        fonts_dir: Каталог обязательных TTF-шрифтов.
 
     Raises:
-        ApplicationError: Шаблон или один из шрифтов отсутствует.
+        ApplicationError: Шаблон или системный Arial отсутствует либо недоступен.
     """
     if not template_path.is_file():
         raise ApplicationError(f"HTML-шаблон не найден: {template_path}")
-    if not fonts_dir.is_dir():
-        raise ApplicationError(f"Каталог шрифтов не найден: {fonts_dir}")
-    for font_name in FONT_FILES:
-        font_path = fonts_dir / font_name
+    for font_path in ARIAL_FONT_PATHS:
         if not font_path.is_file():
             raise ApplicationError(f"Файл шрифта не найден: {font_path}")
+        try:
+            with font_path.open("rb") as font_file:
+                font_file.read(1)
+        except OSError as exc:
+            raise ApplicationError(f"Файл шрифта недоступен: {font_path}: {exc}") from exc
 
 
-def create_link_callback(template_path: Path, fonts_dir: Path):
+def create_link_callback(template_path: Path):
     """Создаёт безопасный resolver локальных ресурсов xhtml2pdf.
 
     Args:
         template_path: Путь исходного HTML-шаблона.
-        fonts_dir: Настроенный каталог TTF-шрифтов.
 
     Returns:
         Callback, преобразующий URI ресурса в абсолютный локальный путь.
@@ -298,10 +298,8 @@ def create_link_callback(template_path: Path, fonts_dir: Path):
         ApplicationError: Callback отклоняет сеть, выход за корень и отсутствующие файлы.
     """
     template_dir = template_path.resolve().parent
-    resolved_fonts = {name: (fonts_dir / name).resolve() for name in FONT_FILES}
-    expected_font_uris = {f"../fonts/{name}": path for name, path in resolved_fonts.items()}
-    expected_font_paths = {
-        (template_dir / uri).resolve(): path for uri, path in expected_font_uris.items()
+    resolved_fonts = {
+        os.path.normcase(str(path.resolve())): path.resolve() for path in ARIAL_FONT_PATHS
     }
 
     def resolve_resource(uri: str, _rel: str | None = None) -> str:
@@ -310,21 +308,20 @@ def create_link_callback(template_path: Path, fonts_dir: Path):
             raise ApplicationError(f"Сетевой или неподдерживаемый ресурс запрещён: {uri}")
         if parsed.netloc:
             raise ApplicationError(f"Сетевой ресурс запрещён: {uri}")
-        normalized_uri = unquote(parsed.path).replace("\\", "/")
-        if not parsed.scheme and normalized_uri in expected_font_uris:
-            resource_path = expected_font_uris[normalized_uri]
-        elif parsed.scheme == "file":
+        if parsed.query or parsed.fragment:
+            raise ApplicationError(f"URI с параметрами запрещён: {uri}")
+        if parsed.scheme == "file":
             path_text = unquote(parsed.path)
             if re.match(r"^/[A-Za-z]:/", path_text):
                 path_text = path_text[1:]
-            resource_path = Path(path_text)
-            resource_path = expected_font_paths.get(resource_path.resolve(), resource_path)
+            normalized_path = os.path.normcase(str(Path(path_text).resolve()))
+            resource_path = resolved_fonts.get(normalized_path)
+            if resource_path is None:
+                raise ApplicationError(f"Произвольный file URI запрещён: {uri}")
         else:
-            resource_path = template_dir / normalized_uri
-        resource_path = resource_path.resolve()
-        allowed_font = resource_path in resolved_fonts.values()
-        if not allowed_font and not resource_path.is_relative_to(template_dir):
-            raise ApplicationError(f"Путь к ресурсу выходит за каталог разрешённых ресурсов: {uri}")
+            resource_path = (template_dir / unquote(parsed.path)).resolve()
+            if not resource_path.is_relative_to(template_dir):
+                raise ApplicationError(f"Путь к ресурсу выходит за каталог шаблона: {uri}")
         if not resource_path.is_file():
             raise ApplicationError(f"Локальный ресурс не найден: {resource_path}")
         return str(resource_path)
@@ -332,14 +329,13 @@ def create_link_callback(template_path: Path, fonts_dir: Path):
     return resolve_resource
 
 
-def create_pdf(document_html: str, pdf_path: Path, template_path: Path, fonts_dir: Path) -> None:
+def create_pdf(document_html: str, pdf_path: Path, template_path: Path) -> None:
     """Формирует PDF из HTML через xhtml2pdf.
 
     Args:
         document_html: Заполненный HTML-документ.
         pdf_path: Путь создаваемого PDF.
         template_path: Путь исходного шаблона для разрешения ресурсов.
-        fonts_dir: Настроенный каталог TTF-шрифтов.
 
     Raises:
         ApplicationError: xhtml2pdf недоступен, сообщил об ошибке или PDF повреждён.
@@ -361,6 +357,7 @@ def create_pdf(document_html: str, pdf_path: Path, template_path: Path, fonts_di
 
     with _XHTML2PDF_LOCK:
         try:
+            pdf_path.parent.mkdir(parents=True, exist_ok=True)
             # ponytail: xhtml2pdf 0.2.17 не переоткрывает delete=True TTF на Windows;
             # lock и workaround удалить после исправления upstream.
             if os.name == "nt":
@@ -371,7 +368,7 @@ def create_pdf(document_html: str, pdf_path: Path, template_path: Path, fonts_di
                     dest=pdf_file,
                     encoding="utf-8",
                     path=template_path.resolve().as_uri(),
-                    link_callback=create_link_callback(template_path, fonts_dir),
+                    link_callback=create_link_callback(template_path),
                 )
             if status.err:
                 raise ApplicationError("xhtml2pdf сообщил об ошибке преобразования HTML в PDF")
@@ -442,9 +439,8 @@ def generate(json_path: Path, config_path: Path) -> Path:
     configure_logging(paths.logs_dir)
     logger.info("Запуск. Входной JSON: %s", json_path.resolve())
     logger.info("HTML-шаблон: %s", paths.template.resolve())
-    logger.info("Каталог шрифтов: %s", paths.fonts_dir.resolve())
 
-    validate_template_resources(paths.template, paths.fonts_dir)
+    validate_template_resources(paths.template)
     data = load_json_file(json_path)
     values, total = validate_data(data)
     try:
@@ -457,7 +453,7 @@ def generate(json_path: Path, config_path: Path) -> Path:
     logger.info("Количество товаров: %d", len(data["items"]))
     logger.info("Общая сумма: %d", total)
     started_at = time.monotonic()
-    create_pdf(document_html, pdf_path, paths.template, paths.fonts_dir)
+    create_pdf(document_html, pdf_path, paths.template)
     logger.info("PDF сформирован за %.3f с", time.monotonic() - started_at)
     logger.info("PDF создан: %s", pdf_path.resolve())
 

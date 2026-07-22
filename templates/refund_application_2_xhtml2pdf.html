@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Заявление на возврат</title>
+  <style type="text/css">
+    @page {
+      size: a4 portrait;
+      margin: 8mm 14mm 8mm 14mm;
+    }
+
+    @font-face {
+      font-family: ArialWindows;
+      src: url("file:///C:/Windows/Fonts/arial.ttf");
+    }
+
+    @font-face {
+      font-family: ArialWindows;
+      src: url("file:///C:/Windows/Fonts/arialbd.ttf");
+      font-weight: bold;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      color: #000000;
+      font-family: ArialWindows, Arial, sans-serif;
+      font-size: 9.5pt;
+      line-height: 11pt;
+    }
+
+    p {
+      margin: 0 0 1.1mm 0;
+      padding: 0;
+    }
+
+    .recipient-table,
+    .fill-line-table,
+    .buyer-line-table,
+    .signature-table,
+    .inline-signature-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .recipient-table {
+      margin-bottom: 2mm;
+    }
+
+    .recipient-spacer {
+      width: 48%;
+    }
+
+    .recipient {
+      width: 52%;
+      vertical-align: top;
+    }
+
+    .recipient-name {
+      margin: 0 4mm 1.5mm 0;
+      text-align: right;
+    }
+
+    .line {
+      font-size: 9pt;
+      line-height: 9pt;
+      white-space: nowrap;
+      vertical-align: baseline;
+    }
+
+    .full-line {
+      height: 4.1mm;
+      margin: 0;
+      border-bottom: 0.25mm solid #000000;
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 7pt;
+      font-weight: bold;
+      line-height: 8pt;
+      text-align: center;
+    }
+
+    .fill-line-table,
+    .buyer-line-table {
+      margin: 0;
+      padding: 0;
+    }
+
+    .fill-line-table td,
+    .buyer-line-table td {
+      padding: 0;
+      vertical-align: bottom;
+    }
+
+    .line-label {
+      width: 7mm;
+      white-space: nowrap;
+    }
+
+    .stretch-line {
+      border-bottom: 0.25mm solid #000000;
+    }
+
+    .buyer-prefix {
+      width: 7mm;
+      white-space: nowrap;
+    }
+
+    .buyer-suffix {
+      width: 35mm;
+      padding-left: 1mm !important;
+      white-space: nowrap;
+    }
+
+    h1 {
+      margin: 0 0 3mm 83mm;
+      padding: 0;
+      font-size: 10.5pt;
+      font-weight: normal;
+    }
+
+    .buyer-hint {
+      width: 119mm;
+      margin: 0 0 1mm 13mm;
+    }
+
+    .items {
+      margin: 0 0 1mm 0;
+    }
+
+    .items p,
+    .item {
+      margin: 0;
+      padding: 0;
+    }
+
+    .price {
+      margin-bottom: 3mm;
+    }
+
+    .underline {
+      text-decoration: underline;
+    }
+
+    .choice-block {
+      margin-top: 1mm;
+      -pdf-keep-with-next: true;
+    }
+
+    .choice-block p {
+      margin-bottom: 0.4mm;
+    }
+
+    .reason-line {
+      height: 3.8mm;
+      border-bottom: 0.25mm solid #000000;
+    }
+
+    .signature-table {
+      margin-top: 3mm;
+      -pdf-keep-in-frame-mode: shrink;
+    }
+
+    .signature-table td {
+      vertical-align: bottom;
+    }
+
+    .signature-date {
+      width: 27%;
+      padding-bottom: 3mm;
+    }
+
+    .signature-gap {
+      width: 4%;
+    }
+
+    .signature-cell {
+      text-align: center;
+    }
+
+    .signature-cell-1 {
+      width: 28%;
+    }
+
+    .signature-cell-2 {
+      width: 37%;
+    }
+
+    .signature-line {
+      height: 4mm;
+      border-bottom: 0.25mm solid #000000;
+    }
+
+    .legal {
+      margin-top: 2.5mm;
+      text-align: justify;
+      -pdf-keep-with-next: true;
+    }
+
+    .legal p {
+      margin: 0;
+      text-indent: 10mm;
+    }
+
+    .inline-signature-table {
+      width: 84%;
+      margin-top: 1mm;
+      margin-left: 10mm;
+      -pdf-keep-in-frame-mode: shrink;
+    }
+
+    .inline-signature-table td {
+      vertical-align: top;
+      text-align: center;
+    }
+
+    .inline-signature-table .left {
+      width: 40%;
+    }
+
+    .inline-signature-table .gap {
+      width: 6%;
+    }
+
+    .inline-signature-table .right {
+      width: 54%;
+    }
+  </style>
+</head>
+<body>
+  <table class="recipient-table">
+    <tr>
+      <td class="recipient-spacer">&#160;</td>
+      <td class="recipient">
+        <div class="recipient-name">{recipient}</div>
+        <table class="fill-line-table">
+          <tr>
+            <td class="line-label">от&#160;</td>
+            <td class="stretch-line">&#160;</td>
+          </tr>
+        </table>
+        <div class="hint">(ФИО)</div>
+        <div class="full-line">&#160;</div>
+        <p>зарегистрирован<span class="line">________________</span>по адресу:</p>
+        <div class="full-line">&#160;</div>
+        <div class="full-line">&#160;</div>
+        <p>паспорт серия <span class="line">________</span> номер <span class="line">____________</span></p>
+        <p>выдан: <span class="line">_________________________</span>20<span class="line">____</span> года</p>
+        <p>кем: <span class="line">___________________________________</span></p>
+        <div class="full-line">&#160;</div>
+        <p>контактный телефон:+7-<span class="line">______________________</span></p>
+      </td>
+    </tr>
+  </table>
+
+  <h1>заявление</h1>
+
+  <table class="buyer-line-table">
+    <tr>
+      <td class="buyer-prefix">Я,&#160;</td>
+      <td class="stretch-line">&#160;</td>
+      <td class="buyer-suffix">, {date} года</td>
+    </tr>
+  </table>
+  <div class="hint buyer-hint">(ФИО печатными буквами)</div>
+  <p>приобрел в магазине «<span class="line">______________</span>», расположенном по адресу: {address} следующий товар:</p>
+  <div class="items">{items}</div>
+  <p class="price">по цене: {total_amount} рублей <span class="line">____</span> копеек.</p>
+
+  <p><strong class="underline">подчеркнуть нужное</strong></p>
+
+  <div class="choice-block">
+    <p>В соответствии с п. 1 ст. 18 «Закона о защите прав потребителей», прошу:</p>
+    <p>заменить указанный товар;</p>
+    <p>соразмерно уменьшить покупную цену;</p>
+    <p>устранить недостаток;</p>
+    <p>вернуть уплаченную за товар сумму</p>
+    <p>в связи с наличием следующих недостатков:<span class="line">_____________________________________</span></p>
+    <div class="reason-line">&#160;</div>
+    <div class="reason-line">&#160;</div>
+  </div>
+
+  <div class="choice-block">
+    <p>В соответствии с п.1 ст. 25 «Закона о защите прав потребителей», прошу:</p>
+    <p>заменить указанный Товар;</p>
+    <p>вернуть уплаченную за товар сумму</p>
+    <p>в связи с тем, что Товар (не подошел по форме, габаритам, фасону, расцветке, размеру или комплектации-указать) <span class="line">_________</span></p>
+    <div class="reason-line">&#160;</div>
+    <div class="reason-line">&#160;</div>
+  </div>
+
+  <table class="signature-table">
+    <tr>
+      <td class="signature-date">{application_date} г.</td>
+      <td class="signature-gap">&#160;</td>
+      <td class="signature-cell signature-cell-1">
+        <div class="signature-line">&#160;</div>
+        <div class="hint">(подпись покупателя)</div>
+      </td>
+      <td class="signature-gap">&#160;</td>
+      <td class="signature-cell signature-cell-2">
+        <div class="signature-line">&#160;</div>
+        <div class="hint">(ФИО)</div>
+      </td>
+    </tr>
+  </table>
+
+  <div class="legal">
+    <p>Настоящим ознакомлен, что согласно с п. 1 Указания Центрального Банка Российской Федерации от 09.12.2019 N5348-У &quot;О правилах наличных расчетов&quot; возврат денежных средств за оплаченный банковской картой товар, осуществляется путем перечисления денежных средств на банковскую карту покупателя на основании возвратного чека и в сроки, установленные банком-эквайером.</p>
+    <table class="inline-signature-table">
+      <tr>
+        <td class="left"><div class="signature-line">&#160;</div><div class="hint">(подпись покупателя)</div></td>
+        <td class="gap">&#160;</td>
+        <td class="right"><div class="signature-line">&#160;</div><div class="hint">(ФИО покупателя)</div></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="legal">
+    <p>Настоящим ознакомлен с тем, что персональные данные покупателя получены {org} в связи с заключением договора розничной купли-продажи на приобретение товара, указанного в кассовом чеке № <span class="line">___________</span> от <span class="line">______________</span> 20<span class="line">___</span>г.</p>
+    <p>{org} гарантирует, полученные персональные данные покупателя не распространять и не предоставлять третьим лицам без согласия покупателя и использовать исключительно для исполнения указанного договора розничной купли-продажи товара.</p>
+    <table class="inline-signature-table">
+      <tr>
+        <td class="left"><div class="signature-line">&#160;</div><div class="hint">(подпись покупателя)</div></td>
+        <td class="gap">&#160;</td>
+        <td class="right"><div class="signature-line">&#160;</div><div class="hint">(ФИО покупателя)</div></td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

@@ -29,6 +29,7 @@ from refund_application_generator import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_PATH = PROJECT_ROOT / "templates" / "refund_application_template_xhtml2pdf.html"
+FONTS_DIR = PROJECT_ROOT / "fonts"
 
 
 def sample_data(items: list[dict] | None = None) -> dict:
@@ -95,7 +96,7 @@ class RefundApplicationGeneratorTest(unittest.TestCase):
         """Создаёт реальный PDF с извлекаемым русским текстом."""
         with tempfile.TemporaryDirectory() as directory:
             pdf_path = Path(directory) / "result.pdf"
-            create_pdf(rendered_document(), pdf_path, TEMPLATE_PATH)
+            create_pdf(rendered_document(), pdf_path, TEMPLATE_PATH, FONTS_DIR)
             text = "\n".join(page.extract_text() or "" for page in PdfReader(pdf_path).pages)
             self.assertTrue(pdf_path.read_bytes().startswith(b"%PDF-"))
             self.assertGreater(pdf_path.stat().st_size, 1000)
@@ -110,7 +111,7 @@ class RefundApplicationGeneratorTest(unittest.TestCase):
                 {"name": "Товар один", "price": 1},
                 {"name": "Товар два", "price": 2},
                 {"name": "Товар три", "price": 3},
-            ])), pdf_path, TEMPLATE_PATH)
+            ])), pdf_path, TEMPLATE_PATH, FONTS_DIR)
             self.assertEqual(len(PdfReader(pdf_path).pages), 1)
 
     def test_many_items_create_multiple_readable_pages(self) -> None:
@@ -118,7 +119,7 @@ class RefundApplicationGeneratorTest(unittest.TestCase):
         items = [{"name": f"Длинное наименование товара номер {index} " * 3, "price": 1} for index in range(1, 61)]
         with tempfile.TemporaryDirectory() as directory:
             pdf_path = Path(directory) / "many.pdf"
-            create_pdf(rendered_document(sample_data(items)), pdf_path, TEMPLATE_PATH)
+            create_pdf(rendered_document(sample_data(items)), pdf_path, TEMPLATE_PATH, FONTS_DIR)
             reader = PdfReader(pdf_path)
             text = "\n".join(page.extract_text() or "" for page in reader.pages)
             self.assertGreater(len(reader.pages), 1)
@@ -131,7 +132,7 @@ class RefundApplicationGeneratorTest(unittest.TestCase):
 
             def create(index: int) -> Path:
                 pdf_path = output_dir / f"parallel-{index}.pdf"
-                create_pdf(rendered_document(), pdf_path, TEMPLATE_PATH)
+                create_pdf(rendered_document(), pdf_path, TEMPLATE_PATH, FONTS_DIR)
                 return pdf_path
 
             with ThreadPoolExecutor(max_workers=2) as executor:
@@ -143,7 +144,12 @@ class RefundApplicationGeneratorTest(unittest.TestCase):
         name = "Очень длинное наименование товара " * 12
         with tempfile.TemporaryDirectory() as directory:
             pdf_path = Path(directory) / "long.pdf"
-            create_pdf(rendered_document(sample_data([{"name": name, "price": 1}])), pdf_path, TEMPLATE_PATH)
+            create_pdf(
+                rendered_document(sample_data([{"name": name, "price": 1}])),
+                pdf_path,
+                TEMPLATE_PATH,
+                FONTS_DIR,
+            )
             text = "\n".join(page.extract_text() or "" for page in PdfReader(pdf_path).pages)
             self.assertIn("Очень длинное наименование", text)
 
@@ -167,7 +173,7 @@ class RefundApplicationGeneratorTest(unittest.TestCase):
                 if font_name != missing_name:
                     shutil.copy2(PROJECT_ROOT / "fonts" / font_name, fonts_dir / font_name)
             with self.assertRaisesRegex(ApplicationError, missing_name):
-                validate_template_resources(template_dir / TEMPLATE_PATH.name)
+                validate_template_resources(template_dir / TEMPLATE_PATH.name, fonts_dir)
 
     def test_converter_error_removes_partial_pdf(self) -> None:
         """Удаляет неполный PDF, если xhtml2pdf сообщил об ошибке."""
@@ -179,18 +185,24 @@ class RefundApplicationGeneratorTest(unittest.TestCase):
             pdf_path = Path(directory) / "partial.pdf"
             with patch("xhtml2pdf.pisa.CreatePDF", side_effect=failed_create_pdf):
                 with self.assertRaisesRegex(ApplicationError, "сообщил об ошибке"):
-                    create_pdf("<html></html>", pdf_path, TEMPLATE_PATH)
+                    create_pdf("<html></html>", pdf_path, TEMPLATE_PATH, FONTS_DIR)
             self.assertFalse(pdf_path.exists())
 
     def test_network_resource_is_rejected(self) -> None:
         """Запрещает сетевые ресурсы."""
-        callback = create_link_callback(TEMPLATE_PATH)
+        callback = create_link_callback(TEMPLATE_PATH, FONTS_DIR)
         with self.assertRaisesRegex(ApplicationError, "запрещён"):
             callback("https://example.com/font.ttf", None)
 
+    def test_network_file_resource_is_rejected(self) -> None:
+        """Запрещает file URI с сетевым authority."""
+        callback = create_link_callback(TEMPLATE_PATH, FONTS_DIR)
+        with self.assertRaisesRegex(ApplicationError, "запрещён"):
+            callback("file://server/share/DejaVuSerif.ttf", None)
+
     def test_resource_cannot_escape_project(self) -> None:
         """Запрещает выход за корневой каталог проекта через .. ."""
-        callback = create_link_callback(TEMPLATE_PATH)
+        callback = create_link_callback(TEMPLATE_PATH, FONTS_DIR)
         with self.assertRaisesRegex(ApplicationError, "выходит за каталог"):
             callback("../../outside.ttf", None)
 
@@ -214,11 +226,57 @@ class RefundApplicationGeneratorTest(unittest.TestCase):
             root = Path(directory)
             config = root / "config.ini"
             config.write_text(
-                "[paths]\ntemplate = template%20.html\nlogs_dir = logs%20dir\npdf_output_dir = output%20dir\n",
+                "[paths]\ntemplate = template%20.html\nfonts_dir = fonts%20dir\n"
+                "logs_dir = logs%20dir\npdf_output_dir = output%20dir\n",
                 encoding="utf-8",
             )
             paths = load_config(config)
         self.assertEqual(paths.template.name, "template%20.html")
+        self.assertEqual(paths.fonts_dir.name, "fonts%20dir")
+
+    def test_config_resolves_relative_fonts_dir_from_config(self) -> None:
+        """Разрешает относительный каталог шрифтов от config.ini."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config = root / "config.ini"
+            config.write_text(
+                "[paths]\ntemplate = template.html\nfonts_dir = assets/fonts\n"
+                "logs_dir = logs\npdf_output_dir = output\n",
+                encoding="utf-8",
+            )
+            paths = load_config(config)
+        self.assertEqual(paths.fonts_dir, root / "assets" / "fonts")
+
+    def test_config_requires_fonts_dir(self) -> None:
+        """Отклоняет конфигурацию без каталога шрифтов."""
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory) / "config.ini"
+            config.write_text(
+                "[paths]\ntemplate = template.html\nlogs_dir = logs\npdf_output_dir = output\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ApplicationError, "fonts_dir"):
+                load_config(config)
+
+    def test_pdf_uses_configured_fonts_outside_template_tree(self) -> None:
+        """Создаёт PDF со шрифтами из независимого настроенного каталога."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            template_dir = root / "documents" / "templates"
+            fonts_dir = root / "assets" / "fonts"
+            template_dir.mkdir(parents=True)
+            fonts_dir.mkdir(parents=True)
+            template_path = template_dir / TEMPLATE_PATH.name
+            shutil.copy2(TEMPLATE_PATH, template_path)
+            for font_name in ("DejaVuSerif.ttf", "DejaVuSerif-Bold.ttf"):
+                shutil.copy2(FONTS_DIR / font_name, fonts_dir / font_name)
+            pdf_path = root / "result.pdf"
+
+            validate_template_resources(template_path, fonts_dir)
+            create_pdf(rendered_document(), pdf_path, template_path, fonts_dir)
+
+            text = "\n".join(page.extract_text() or "" for page in PdfReader(pdf_path).pages)
+            self.assertIn("Клевер Урал", text)
 
     def test_rejects_unknown_or_double_braced_markers(self) -> None:
         """Не допускает служебные метки вне утверждённого формата."""
@@ -250,6 +308,7 @@ class RefundApplicationGeneratorTest(unittest.TestCase):
             config.write_text(
                 "[paths]\n"
                 f"template = {TEMPLATE_PATH}\n"
+                f"fonts_dir = {FONTS_DIR}\n"
                 "logs_dir = logs\n"
                 "pdf_output_dir = output\n",
                 encoding="utf-8",

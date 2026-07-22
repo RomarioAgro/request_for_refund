@@ -27,11 +27,13 @@ python -m pip install -r requirements.txt
 ```ini
 [paths]
 template = templates/refund_application_template_xhtml2pdf.html
+fonts_dir = fonts
 logs_dir = logs
 pdf_output_dir = output
 ```
 
 - `template` — путь к HTML-шаблону заявления;
+- `fonts_dir` — каталог с файлами `DejaVuSerif.ttf` и `DejaVuSerif-Bold.ttf`;
 - `logs_dir` — каталог технических журналов;
 - `pdf_output_dir` — каталог готовых PDF.
 

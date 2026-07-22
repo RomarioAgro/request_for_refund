@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Заявление на возврат</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 8mm 14mm 8mm 14mm;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      color: #000;
+      font-family: "Times New Roman", "Liberation Serif", serif;
+      font-size: 10pt;
+      line-height: 1.04;
+    }
+
+    .page {
+      width: 182mm;
+      min-height: 281mm;
+      margin: 0 auto;
+    }
+
+    .recipient {
+      width: 92mm;
+      margin-left: auto;
+      margin-bottom: 3mm;
+    }
+
+    .recipient-name {
+      min-height: 5mm;
+      text-align: right;
+      font-size: 10.2pt;
+      margin-bottom: 1mm;
+    }
+
+    .field-line {
+      display: inline-block;
+      border-bottom: 0.25mm solid #000;
+      min-width: 20mm;
+      height: 1.1em;
+      vertical-align: baseline;
+    }
+
+    .line-full {
+      border-bottom: 0.25mm solid #000;
+      height: 4.4mm;
+    }
+
+    .hint {
+      text-align: center;
+      font-size: 7.8pt;
+      font-weight: 700;
+      line-height: 1;
+      margin-top: 0.3mm;
+    }
+
+    .recipient p,
+    .body p { margin: 0 0 0.55mm; }
+
+    h1 {
+      margin: 0 0 3mm 84mm;
+      font-size: 10.5pt;
+      font-weight: 400;
+      text-transform: lowercase;
+    }
+
+    .purchase-intro { margin-bottom: 0.8mm; }
+
+    .items {
+      min-height: 4mm;
+      margin: 0 0 0.7mm;
+      white-space: pre-line;
+    }
+
+    .price { margin-bottom: 3.5mm !important; }
+
+    .underline { text-decoration: underline; }
+
+    .choice-block {
+      margin-top: 0.8mm;
+      page-break-inside: avoid;
+    }
+
+    .choice-block p { margin-bottom: 0.3mm; }
+
+    .reason-lines { margin-top: -0.4mm; }
+
+    .reason-lines .line-full { height: 3.7mm; }
+
+    .signature-row {
+      display: grid;
+      grid-template-columns: 45mm 48mm 1fr;
+      column-gap: 8mm;
+      align-items: end;
+      margin: 3.5mm 0 0.5mm;
+      page-break-inside: avoid;
+    }
+
+    .signature-date {
+      white-space: nowrap;
+      padding-bottom: 1.5mm;
+    }
+
+    .signature-field {
+      text-align: center;
+    }
+
+    .signature-field .field-line {
+      display: block;
+      width: 100%;
+      height: 3.8mm;
+    }
+
+    .legal {
+      margin-top: 2.5mm;
+      text-align: justify;
+      text-indent: 10mm;
+      page-break-inside: avoid;
+    }
+
+    .legal p { margin: 0; }
+
+    .inline-signature {
+      display: grid;
+      grid-template-columns: 56mm 82mm;
+      column-gap: 5mm;
+      margin-top: 0.6mm;
+      margin-left: 10mm;
+      text-indent: 0;
+    }
+
+    .inline-signature > div { text-align: center; }
+
+    .inline-signature .field-line {
+      display: block;
+      width: 100%;
+      height: 3.2mm;
+    }
+
+    .org { white-space: normal; }
+
+    @media screen {
+      body { background: #ececec; }
+      .page {
+        background: #fff;
+        padding: 8mm 14mm;
+        width: 210mm;
+        min-height: 297mm;
+        margin: 10mm auto;
+        box-shadow: 0 1mm 4mm rgba(0, 0, 0, 0.18);
+      }
+    }
+
+    @media print {
+      .page { width: auto; min-height: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="recipient">
+      <div class="recipient-name">{recipient}</div>
+      <p>от <span class="field-line" style="width: 81mm"></span></p>
+      <div class="hint">(ФИО)</div>
+      <div class="line-full"></div>
+      <p>зарегистрирован<span class="field-line" style="width: 34mm"></span> по адресу:</p>
+      <div class="line-full"></div>
+      <div class="line-full"></div>
+      <p>паспорт серия <span class="field-line" style="width: 18mm"></span> номер <span class="field-line" style="width: 26mm"></span></p>
+      <p>выдан: <span class="field-line" style="width: 8mm"></span> <span class="field-line" style="width: 36mm"></span> 20<span class="field-line" style="width: 8mm"></span> года</p>
+      <p>кем: <span class="field-line" style="width: 77mm"></span></p>
+      <div class="line-full"></div>
+      <p>контактный телефон: +7-<span class="field-line" style="width: 48mm"></span></p>
+    </section>
+
+    <section class="body">
+      <h1>заявление</h1>
+
+      <p>Я, <span class="field-line" style="width: 119mm"></span>, {date} года</p>
+      <div class="hint" style="width:119mm; margin-left:13mm">(ФИО печатными буквами)</div>
+      <p class="purchase-intro">приобрел__ в магазине «{org}», расположенном по адресу: {address}, следующий товар:</p>
+      <div class="items">{items}</div>
+      <p class="price">по цене: {total_amount} рублей.</p>
+
+      <p><strong class="underline">подчеркнуть нужное</strong></p>
+
+      <div class="choice-block">
+        <p>В соответствии с п. 1 ст. 18 «Закона о защите прав потребителей», прошу:</p>
+        <p>заменить указанный товар;</p>
+        <p>соразмерно уменьшить покупную цену;</p>
+        <p>устранить недостаток;</p>
+        <p>вернуть уплаченную за товар сумму</p>
+        <p>в связи с наличием следующих недостатков:<span class="field-line" style="width:78mm"></span></p>
+        <div class="reason-lines">
+          <div class="line-full"></div>
+          <div class="line-full"></div>
+        </div>
+      </div>
+
+      <div class="choice-block">
+        <p>В соответствии с п. 1 ст. 25 «Закона о защите прав потребителей», прошу:</p>
+        <p>заменить указанный товар;</p>
+        <p>вернуть уплаченную за товар сумму</p>
+        <p>в связи с тем, что товар (не подошел по форме, габаритам, фасону, расцветке, размеру или комплектации — указать) <span class="field-line" style="width: 20mm"></span></p>
+        <div class="reason-lines">
+          <div class="line-full"></div>
+          <div class="line-full"></div>
+        </div>
+      </div>
+
+      <div class="signature-row">
+        <div class="signature-date">{application_date}</div>
+        <div class="signature-field"><span class="field-line"></span><div class="hint">(подпись покупателя)</div></div>
+        <div class="signature-field"><span class="field-line"></span><div class="hint">(ФИО)</div></div>
+      </div>
+
+      <div class="legal">
+        <p>Настоящим ознакомлен, что согласно п. 1 Указания Центрального Банка Российской Федерации от 09.12.2019 № 5348-У «О правилах наличных расчетов» возврат денежных средств за оплаченный банковской картой товар осуществляется путем перечисления денежных средств на банковскую карту покупателя на основании возвратного чека и в сроки, установленные банком-эквайером.</p>
+        <div class="inline-signature">
+          <div><span class="field-line"></span><div class="hint">(подпись покупателя)</div></div>
+          <div><span class="field-line"></span><div class="hint">(ФИО покупателя)</div></div>
+        </div>
+      </div>
+
+      <div class="legal">
+        <p>Настоящим ознакомлен с тем, что персональные данные покупателя получены <span class="org">{org}</span> в связи с заключением договора розничной купли-продажи на приобретение товара, указанного в кассовом чеке № <span class="field-line" style="width:23mm"></span> от <span class="field-line" style="width:30mm"></span> 20<span class="field-line" style="width:7mm"></span> г.</p>
+        <p><span class="org">{org}</span> гарантирует полученные персональные данные покупателя не распространять и не предоставлять третьим лицам без согласия покупателя и использовать исключительно для исполнения указанного договора розничной купли-продажи товара.</p>
+        <div class="inline-signature">
+          <div><span class="field-line"></span><div class="hint">(подпись покупателя)</div></div>
+          <div><span class="field-line"></span><div class="hint">(ФИО покупателя)</div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

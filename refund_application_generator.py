@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 REQUIRED_FIELDS = {"recipient", "org", "address", "date", "items", "total_amount", "application_date"}
 PLACEHOLDER_RE = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 RECIPIENT_NAME_RE = re.compile(
-    r"[А-ЯЁA-Z][А-ЯЁа-яёA-Za-z-]*(?:\s+(?:[А-ЯЁA-Z]\.|[А-ЯЁA-Z][А-ЯЁа-яёA-Za-z-]*)){1,2}"
+    r"[А-ЯЁA-Z][А-ЯЁа-яёA-Za-z-]*\s+[А-ЯЁA-Z]\.\s+[А-ЯЁA-Z]\."
 )
 ARIAL_REGULAR_PATH = Path(r"C:\Windows\Fonts\arial.ttf")
 ARIAL_BOLD_PATH = Path(r"C:\Windows\Fonts\arialbd.ttf")
@@ -135,6 +135,32 @@ def load_json_file(json_path: Path) -> dict[str, Any]:
     return data
 
 
+def make_recipient_fio_non_breaking(recipient: str) -> str:
+    """Запрещает перенос строки внутри ФИО адресата.
+
+    Последние три части адресата распознаются как ``Фамилия И. О.`` и
+    соединяются неразрывными пробелами. Перенос перед фамилией остаётся
+    разрешённым.
+
+    Args:
+        recipient: Полная строка адресата.
+
+    Returns:
+        Строка с неразрывными пробелами внутри ФИО либо исходная строка,
+        если ФИО в конце не распознано.
+    """
+    parts = recipient.rsplit(maxsplit=3)
+    if len(parts) != 4:
+        return recipient
+
+    prefix, surname, first_initial, second_initial = parts
+    fio = f"{surname} {first_initial} {second_initial}"
+    if not RECIPIENT_NAME_RE.fullmatch(fio):
+        return recipient
+
+    return f"{prefix} {fio.replace(' ', chr(160))}"
+
+
 def validate_data(data: dict[str, Any]) -> tuple[dict[str, TemplateValue], int]:
     """Проверяет данные возврата и готовит значения шаблона.
 
@@ -182,13 +208,7 @@ def validate_data(data: dict[str, Any]) -> tuple[dict[str, TemplateValue], int]:
     if total <= 0:
         raise ApplicationError("Общая сумма возврата должна быть больше нуля")
 
-    recipient = strings["recipient"]
-    quote_index = max(recipient.rfind(quote) for quote in ('"', "»", "”"))
-    suffix = recipient[quote_index + 1 :].lstrip() if quote_index >= 0 else ""
-    if suffix:
-        if RECIPIENT_NAME_RE.fullmatch(suffix):
-            suffix = suffix.replace(" ", chr(160))
-        recipient = f"{recipient[:quote_index + 1]}\u200b {suffix}"
+    recipient = make_recipient_fio_non_breaking(strings["recipient"])
 
     return {
         "recipient": recipient,
